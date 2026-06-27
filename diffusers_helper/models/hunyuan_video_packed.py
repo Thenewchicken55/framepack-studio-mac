@@ -81,6 +81,8 @@ elif has_xformers:
     print("✅  Using xFormers.")
     print("   - Consider installing SAGE Attention for highest performance.")
     print("   - or Consider installing Flash Attention for high performance.")
+elif torch.backends.mps.is_available():
+    print("ℹ️  Running on Apple MPS (Metal). Using native PyTorch attention.")
 else:
     print("⚠️  No attention library found. Using native PyTorch Scaled Dot Product Attention.")
     print("   - For better performance, consider installing one of:")
@@ -160,8 +162,13 @@ def attn_varlen_func(q, k, v, cu_seqlens_q, cu_seqlens_kv, max_seqlen_q, max_seq
         x = sageattn_varlen(q, k, v, cu_seqlens_q, cu_seqlens_kv, max_seqlen_q, max_seqlen_kv)
     elif flash_attn_varlen_func is not None:
         x = flash_attn_varlen_func(q, k, v, cu_seqlens_q, cu_seqlens_kv, max_seqlen_q, max_seqlen_kv)
+    elif hasattr(torch.nn.functional, 'scaled_dot_product_attention'):
+        # Fallback to native PyTorch SDPA (works on MPS/CPU)
+        x = torch.nn.functional.scaled_dot_product_attention(q.transpose(0, 1), k.transpose(0, 1).transpose(-2, -1), v.transpose(0, 1)).transpose(0, 1)
     else:
-        raise NotImplementedError('No Attn Installed!')
+        # Ultimate fallback: manual attention
+        attn_weight = torch.softmax((q @ k.transpose(-2, -1)) / (q.shape[-1] ** 0.5), dim=-1)
+        x = attn_weight @ v
     x = x.view(batch_size, max_seqlen_q, *x.shape[2:])
     return x
 
