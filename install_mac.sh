@@ -47,7 +47,13 @@ cd "$SCRIPT_DIR"
 if [ -d "venv" ]; then
     echo ""
     echo "Virtual environment already exists."
-    read -p "Do you want to reinstall packages? [y/N]: " REINSTALL
+    # Default to no reinstall if not interactive
+    if [ -t 0 ]; then
+        read -p "Do you want to reinstall packages? [y/N]: " REINSTALL
+    else
+        REINSTALL="n"
+        echo "Non-interactive shell detected, defaulting to: no reinstall"
+    fi
     if [ "$REINSTALL" != "y" ] && [ "$REINSTALL" != "Y" ]; then
         echo "Skipping installation."
         exit 0
@@ -67,7 +73,12 @@ echo "--------------------------------"
 echo "1) Latest stable (recommended)"
 echo "2) PyTorch 2.6.0"
 echo "3) PyTorch 2.5.1"
-read -p "Select version [1]: " TORCH_CHOICE
+if [ -t 0 ]; then
+    read -p "Select version [1]: " TORCH_CHOICE
+else
+    TORCH_CHOICE="1"
+    echo "Non-interactive shell detected, defaulting to latest PyTorch."
+fi
 
 case "$TORCH_CHOICE" in
     2) TORCH_VERSION="2.6.0" ;;

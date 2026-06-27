@@ -7,7 +7,7 @@ import pathlib
 from PIL import Image
 
 from diffusers_helper.models.hunyuan_video_packed import HunyuanVideoTransformer3DModelPacked
-from diffusers_helper.memory import DynamicSwapInstaller
+from diffusers_helper.memory import DynamicSwapInstaller, get_optimal_dtype
 from diffusers_helper.utils import resize_and_center_crop
 from diffusers_helper.bucket_tools import find_nearest_bucket
 from diffusers_helper.hunyuan import vae_encode, vae_decode
@@ -75,12 +75,12 @@ class VideoBaseModelGenerator(BaseModelGenerator):
         # Create the transformer model
         self.transformer = HunyuanVideoTransformer3DModelPacked.from_pretrained(
             path_to_load, 
-            torch_dtype=torch.bfloat16
+            torch_dtype=get_optimal_dtype()
         ).cpu()
         
         # Configure the model
         self.transformer.eval()
-        self.transformer.to(dtype=torch.bfloat16)
+        self.transformer.to(dtype=get_optimal_dtype())
         self.transformer.requires_grad_(False)
         
         # Set up dynamic swap if not in high VRAM mode

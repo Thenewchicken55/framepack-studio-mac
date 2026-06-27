@@ -1,3 +1,4 @@
+import os
 from datetime import datetime
 from typing import List, Optional
 import queue
@@ -39,7 +40,7 @@ class MessageManager:
         """Format file paths to be more concise and readable."""
         if "GRADIO_TEMP_DIR" in message:
             # Extract just the filename from temp path
-            filename = message.split("\\")[-1]
+            filename = message.split(os.sep)[-1]
             return message.split(":")[0] + ": " + filename
         elif "batch_" in message:
             # Shorten batch folder path

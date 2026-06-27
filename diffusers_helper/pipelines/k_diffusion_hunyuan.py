@@ -47,13 +47,16 @@ def sample_hunyuan(
         negative_prompt_embeds=None,
         negative_prompt_embeds_mask=None,
         negative_prompt_poolers=None,
-        dtype=torch.bfloat16,
+        dtype=None,
         device=None,
         negative_kwargs=None,
         callback=None,
         **kwargs,
 ):
     device = device or transformer.device
+    if dtype is None:
+        from diffusers_helper.memory import get_optimal_dtype
+        dtype = get_optimal_dtype()
 
     if batch_size is None:
         batch_size = int(prompt_embeds.shape[0])

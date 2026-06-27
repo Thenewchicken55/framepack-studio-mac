@@ -1072,6 +1072,16 @@ def tb_get_formatted_toolbar_stats():
                 load = nvidia_metrics.get('utilization', 0.0)
                 gpu_full_str = f"GPU: {temp:.0f}°C {load:.0f}%"
                 gpu_component_visible = True
+        elif torch.backends.mps.is_available():
+            _, mac_metrics, _ = SystemMonitor.get_mac_gpu_info()
+            if mac_metrics:
+                vram_used = mac_metrics.get('memory_used_gb', 0.0)
+                vram_total = mac_metrics.get('memory_total_gb', 0.0)
+                vram_full_str = f"Unified: {vram_used:.1f}/{round(vram_total)}GB"
+                vram_component_visible = True
+                load = mac_metrics.get('utilization', 0.0)
+                gpu_full_str = f"GPU Load: {load:.0f}%"
+                gpu_component_visible = True
 
     except Exception as e:
         print(f"Error getting system stats values for toolbar (from toolbox_app.py): {e}")
@@ -1079,6 +1089,11 @@ def tb_get_formatted_toolbar_stats():
         is_nvidia_expected = torch.cuda.is_available()
         if is_nvidia_expected:
             vram_full_str = "VRAM: Error"
+            gpu_full_str = "GPU: Error"
+            vram_component_visible = True
+            gpu_component_visible = True
+        elif torch.backends.mps.is_available():
+            vram_full_str = "Unified: Error"
             gpu_full_str = "GPU: Error"
             vram_component_visible = True
             gpu_component_visible = True

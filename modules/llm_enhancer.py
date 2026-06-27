@@ -89,11 +89,13 @@ def _load_enhancing_model():
     if model is None or tokenizer is None:
         print(f"LLM Enhancer: Loading model '{MODEL_NAME}' to {DEVICE}...")
         tokenizer = AutoTokenizer.from_pretrained(MODEL_NAME)
-        model = AutoModelForCausalLM.from_pretrained(
-            MODEL_NAME,
-            torch_dtype="auto",
-            device_map="auto"
-        )
+        # Use explicit device placement (device_map='auto' does not support MPS)
+        load_kwargs = {"torch_dtype": "auto"}
+        if DEVICE != "cpu":
+            load_kwargs["device_map"] = DEVICE if DEVICE.startswith("cuda") else None
+        model = AutoModelForCausalLM.from_pretrained(MODEL_NAME, **load_kwargs)
+        if DEVICE and not DEVICE.startswith("cuda"):
+            model = model.to(DEVICE)
         print("LLM Enhancer: Model loaded successfully.")
 
 def _run_inference(text_to_enhance: str) -> str:
