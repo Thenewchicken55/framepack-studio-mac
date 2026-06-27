@@ -2,7 +2,6 @@ import torch
 import os
 import numpy as np
 import math
-import decord
 from tqdm import tqdm
 import pathlib
 from PIL import Image
@@ -33,16 +32,27 @@ class VideoBaseModelGenerator(BaseModelGenerator):
         self.no_resize = False  # Default to resize
         self.vae_batch_size = 16  # Default VAE batch size
         
-        # Import decord and tqdm here to avoid import errors if not installed
+        # Import video reader (try decord first, then cv2, then av as fallback)
+        self.video_reader = None
+        self.tqdm = None
         try:
             import decord
+            self.video_reader = 'decord'
+        except ImportError:
+            try:
+                import cv2
+                self.video_reader = 'cv2'
+            except ImportError:
+                try:
+                    import av
+                    self.video_reader = 'av'
+                except ImportError:
+                    print("Warning: No video reader found (tried decord, cv2, av). Video processing will not work.")
+        try:
             from tqdm import tqdm
-            self.decord = decord
             self.tqdm = tqdm
         except ImportError:
-            print("Warning: decord or tqdm not installed. Video processing will not work.")
-            self.decord = None
-            self.tqdm = None
+            pass
     
     def get_model_name(self):
         """
@@ -139,6 +149,39 @@ class VideoBaseModelGenerator(BaseModelGenerator):
 
         return frames_to_encode_count
 
+    def _read_video(self, video_path):
+        """Read video frames using available backend (decord, cv2, or av)."""
+        if self.video_reader == 'decord':
+            import decord
+            vr = decord.VideoReader(video_path)
+            fps = vr.get_avg_fps()
+            frames = vr.get_batch(range(len(vr))).asnumpy()
+            return frames, fps
+        elif self.video_reader == 'cv2':
+            import cv2
+            cap = cv2.VideoCapture(video_path)
+            fps = cap.get(cv2.CAP_PROP_FPS)
+            frames = []
+            while True:
+                ret, frame = cap.read()
+                if not ret:
+                    break
+                frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
+                frames.append(frame)
+            cap.release()
+            return np.stack(frames), fps
+        elif self.video_reader == 'av':
+            import av
+            container = av.open(video_path)
+            fps = float(container.streams.video[0].average_rate)
+            frames = []
+            for frame in container.decode(video=0):
+                frames.append(frame.to_rgb().to_ndarray())
+            container.close()
+            return np.stack(frames), fps
+        else:
+            raise ImportError("No video reader available. Install decord, opencv-python, or av.")
+
     def extract_video_frames(self, is_for_encode, video_path, resolution, no_resize=False, input_files_dir=None):
         """
         Extract real frames from a video, resized and center cropped as numpy array (T, H, W, C).
@@ -193,38 +236,24 @@ class VideoBaseModelGenerator(BaseModelGenerator):
         try:
             # Load video and get FPS
             print("Initializing VideoReader...")
-            vr = decord.VideoReader(video_path)
-            fps = vr.get_avg_fps()  # Get input video FPS
-            num_real_frames = len(vr)
+            all_frames_np, fps = self._read_video(video_path)
+            num_real_frames = all_frames_np.shape[0]
             print(f"Video loaded: {num_real_frames} frames, FPS: {fps}")
 
             # Read frames
             print("Reading video frames...")
 
-            total_frames_in_video_file = len(vr)
+            total_frames_in_video_file = all_frames_np.shape[0]
             if is_for_encode:
                 print(f"Using minimum real frames to encode: {self.min_real_frames_to_encode(total_frames_in_video_file)}")
                 num_real_frames = self.min_real_frames_to_encode(total_frames_in_video_file)
-            # else left as all frames -- len(vr) with no regard for trimming or latent alignment
-
-            # RT_BORG: Retaining this commented code for reference.
-            # pftq encoder discarded truncated frames from the end of the video.
-            # frames = vr.get_batch(range(num_real_frames)).asnumpy()  # Shape: (num_real_frames, height, width, channels)
-
-            # RT_BORG: Retaining this commented code for reference.
-            # pftq retained the entire encoded video.
-            # Truncate to nearest latent size (multiple of 4)
-            # latent_size_factor = 4
-            # num_frames = (num_real_frames // latent_size_factor) * latent_size_factor
-            # if num_frames != num_real_frames:
-            #     print(f"Truncating video from {num_real_frames} to {num_frames} frames for latent size compatibility")
-            # num_real_frames = num_frames
+            # else left as all frames with no regard for trimming or latent alignment
 
             # Discard truncated frames from the beginning of the video, retaining the last num_real_frames
             # This ensures a smooth transition from the input video to the generated video
             start_frame_index = total_frames_in_video_file - num_real_frames
             frame_indices_to_extract = range(start_frame_index, total_frames_in_video_file)
-            frames = vr.get_batch(frame_indices_to_extract).asnumpy()  # Shape: (num_real_frames, height, width, channels)
+            frames = all_frames_np[list(frame_indices_to_extract)]  # Shape: (num_real_frames, height, width, channels)
 
             print(f"Frames read: {frames.shape}")
 

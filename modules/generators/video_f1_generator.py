@@ -2,7 +2,6 @@ import torch
 import os
 import numpy as np
 import math
-import decord
 from tqdm import tqdm
 import pathlib
 from PIL import Image
