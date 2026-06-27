@@ -31,6 +31,34 @@ def setup_ffmpeg():
         download_url = "https://johnvansickle.com/ffmpeg/releases/ffmpeg-release-amd64-static.tar.xz"
         archive_name = 'ffmpeg.tar.xz'
         # --- CHANGE: We no longer hardcode the path_in_archive_to_bin for Linux ---
+    elif sys.platform == "darwin":
+        platform = "darwin"
+        ffmpeg_name = 'ffmpeg'
+        ffprobe_name = 'ffprobe'
+        # On macOS, ffmpeg is typically installed via Homebrew or available through imageio_ffmpeg
+        try:
+            import imageio_ffmpeg
+            bundled_ffmpeg = imageio_ffmpeg.get_ffmpeg_exe()
+            bundled_dir = os.path.dirname(bundled_ffmpeg)
+            if os.path.exists(os.path.join(bundled_dir, ffmpeg_name)):
+                # Symlink the bundled ffmpeg
+                if not os.path.exists(ffmpeg_path):
+                    os.symlink(bundled_ffmpeg, ffmpeg_path)
+                bundled_ffprobe = os.path.join(bundled_dir, ffprobe_name)
+                if os.path.exists(bundled_ffprobe) and not os.path.exists(ffprobe_path):
+                    os.symlink(bundled_ffprobe, ffprobe_path)
+                print(f"✅ FFmpeg set up from imageio_ffmpeg: {bundled_ffmpeg}")
+                return
+        except ImportError:
+            pass
+        # Check if ffmpeg is in PATH
+        ffmpeg_in_path = shutil.which('ffmpeg')
+        ffprobe_in_path = shutil.which('ffprobe')
+        if ffmpeg_in_path and ffprobe_in_path:
+            print(f"✅ FFmpeg found in PATH: {ffmpeg_in_path}")
+            return
+        print(f"Warning: FFmpeg not found. Install via 'brew install ffmpeg' or install imageio-ffmpeg.")
+        return
     else:
         print(f"Unsupported platform: {sys.platform}")
         print("Please download FFmpeg manually and place ffmpeg/ffprobe in the 'bin' directory.")
