@@ -6,7 +6,12 @@ from transformers import AutoModelForCausalLM, AutoTokenizer
 # Using a smaller, faster model for this feature.
 # This can be moved to a settings file later.
 MODEL_NAME = "ibm-granite/granite-3.3-2b-instruct"
-DEVICE = "cuda" if torch.cuda.is_available() else "cpu"
+if torch.cuda.is_available():
+    DEVICE = "cuda"
+elif torch.backends.mps.is_available():
+    DEVICE = "mps"
+else:
+    DEVICE = "cpu"
 SYSTEM_PROMPT= (
     "You are a tool to enhance descriptions of scenes, aiming to rewrite user "
     "input into high-quality prompts for increased coherency and fluency while "
@@ -135,7 +140,8 @@ def unload_enhancing_model():
     if tokenizer is not None:
         del tokenizer
         tokenizer = None
-    torch.cuda.empty_cache()
+    if torch.cuda.is_available():
+        torch.cuda.empty_cache()
 
 
 def enhance_prompt(prompt_text: str) -> str:

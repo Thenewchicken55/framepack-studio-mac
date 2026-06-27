@@ -249,7 +249,7 @@ class SystemMonitor:
             # Determine GPU type and get metrics
             if torch.cuda.is_available(): # Implies NVIDIA usually
                 gpu_name_display, metrics, gpu_warning = cls.get_nvidia_gpu_info()
-            elif platform.system() == "Darwin" and platform.processor() == "arm": # Apple Silicon
+            elif platform.system() == "Darwin": # Apple Silicon and Intel Macs
                 gpu_name_display, metrics, gpu_warning = cls.get_mac_gpu_info()
             elif cls.is_amd_gpu(): # Check for AMD (works on Linux, might need refinement for Windows if not using PyTorch ROCm)
                 gpu_name_display, metrics, gpu_warning = cls.get_amd_gpu_info()

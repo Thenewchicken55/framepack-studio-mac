@@ -1,10 +1,18 @@
 import torch
+import platform
 from PIL import Image
 import numpy as np
 from transformers import AutoProcessor, AutoModelForCausalLM
 
-device = "cuda:0" if torch.cuda.is_available() else "cpu"
-torch_dtype = torch.float16 if torch.cuda.is_available() else torch.float32
+if torch.cuda.is_available():
+    device = "cuda:0"
+    torch_dtype = torch.float16
+elif torch.backends.mps.is_available():
+    device = "mps"
+    torch_dtype = torch.float16
+else:
+    device = "cpu"
+    torch_dtype = torch.float32
 
 model = None
 processor = None
@@ -35,7 +43,8 @@ def unload_captioning_model():
     if processor is not None:
         del processor
         processor = None
-    torch.cuda.empty_cache()
+    if torch.cuda.is_available():
+        torch.cuda.empty_cache()
     print("Florence-2 model unloaded successfully.")
 
 prompt = "<MORE_DETAILED_CAPTION>"

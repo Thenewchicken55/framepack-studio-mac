@@ -302,11 +302,6 @@ class VideoBaseModelGenerator(BaseModelGenerator):
         try:
             if device is None:
                 device = self.gpu
-                
-            # Check CUDA availability and fallback to CPU if needed
-            if device == "cuda" and not torch.cuda.is_available():
-                print("CUDA is not available, falling back to CPU")
-                device = "cpu"
 
             # Save first frame for CLIP vision encoding
             input_image_np = input_frames_resized_np[0]
@@ -344,16 +339,16 @@ class VideoBaseModelGenerator(BaseModelGenerator):
                     batch = frames_pt[:, :, i:i + vae_batch_size]  # Shape: (1, channels, batch_size, height, width)
                     try:
                         # Log GPU memory before encoding
-                        if device == "cuda":
+                        if device.type == "cuda" and torch.cuda.is_available():
                             free_mem = torch.cuda.memory_allocated() / 1024**3
                         batch_latent = vae_encode(batch, self.vae)
                         # Synchronize CUDA to catch issues
-                        if device == "cuda":
+                        if device.type == "cuda" and torch.cuda.is_available():
                             torch.cuda.synchronize()
                         latents.append(batch_latent)
                     except RuntimeError as e:
                         print(f"Error during VAE encoding: {str(e)}")
-                        if device == "cuda" and "out of memory" in str(e).lower():
+                        if device.type == "cuda" and "out of memory" in str(e).lower():
                             print("CUDA out of memory, try reducing vae_batch_size or using CPU")
                         raise
             
@@ -376,7 +371,7 @@ class VideoBaseModelGenerator(BaseModelGenerator):
                 print("======================================================")
 
             # Move VAE back to CPU to free GPU memory
-            if device == "cuda":
+            if device.type == "cuda" and torch.cuda.is_available():
                 self.vae.to(self.cpu)
                 torch.cuda.empty_cache()
                 print("VAE moved back to CPU, CUDA cache cleared")

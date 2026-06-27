@@ -51,7 +51,12 @@ class BaseModelGenerator(ABC):
         self.settings = settings
         self.offline = offline 
         self.transformer = None
-        self.gpu = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+        if torch.cuda.is_available():
+            self.gpu = torch.device("cuda")
+        elif torch.backends.mps.is_available():
+            self.gpu = torch.device("mps")
+        else:
+            self.gpu = torch.device("cpu")
         self.cpu = torch.device("cpu")
 
             
