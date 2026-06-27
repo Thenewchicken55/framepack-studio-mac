@@ -25,7 +25,15 @@ FramePack Studio is an AI video generation application based on FramePack that s
 
 ## Prerequisites
 
+**CUDA (Linux/Windows)**
 - CUDA-compatible GPU with at least 8GB VRAM (16GB+ recommended)
+
+**macOS**
+- Apple Silicon (M1/M2/M3/M4) or Intel Mac
+- 16GB System Memory (32GB+ strongly recommended)
+- For Intel Macs: CPU-only (no compatible GPU)
+
+**All platforms**
 - 16GB System Memory (32GB+ strongly recommended)
 - 80GB+ of storage (including ~25GB for each model family: Original and F1)
 
@@ -35,7 +43,25 @@ For information on installation, configuration, and usage, please visit our [doc
 
 ## Installation
 
-Please see [this guide](https://docs.framepackstudio.com/docs/get_started/) on our documentation site to get FP-Studio installed.
+### Linux / Windows (CUDA)
+
+Please see [this guide](https://docs.framepackstudio.com/docs/get_started/) on our documentation site.
+
+### macOS
+
+```bash
+# 1. Clone the repository
+git clone https://github.com/colinurbs/FramePack-Studio.git
+cd FramePack-Studio
+
+# 2. Run the macOS installer (creates venv, installs PyTorch + deps)
+./install_mac.sh
+
+# 3. Launch
+./run_mac.sh
+```
+
+`install_mac.sh` will detect Apple Silicon vs Intel automatically and prompts for PyTorch version. `run_mac.sh` activates the venv and starts the Gradio app on `http://127.0.0.1:7860`.
 
 ## Contributing 
 
