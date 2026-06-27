@@ -276,7 +276,36 @@ def save_bcthw_as_mp4(x, output_filename, fps=10, crf=0):
     x = torch.clamp(x.float(), -1., 1.) * 127.5 + 127.5
     x = x.detach().cpu().to(torch.uint8)
     x = einops.rearrange(x, '(m n) c t h w -> t (m h) (n w) c', n=per_row)
-    torchvision.io.write_video(output_filename, x, fps=fps, video_codec='libx264', options={'crf': str(int(crf))})
+
+    try:
+        torchvision.io.write_video(output_filename, x, fps=fps, video_codec='libx264', options={'crf': str(int(crf))})
+    except (RuntimeError, ModuleNotFoundError):
+        # Fallback for Mac: torchvision may not have ffmpeg compiled in
+        try:
+            import imageio_ffmpeg
+            import subprocess
+            import tempfile
+
+            ffmpeg_path = imageio_ffmpeg.get_ffmpeg_exe()
+            height, width, = x.shape[1], x.shape[2]
+            pipe_cmd = [
+                ffmpeg_path, '-y', '-f', 'rawvideo', '-vcodec', 'rawvideo',
+                '-s', f'{width}x{height}', '-pix_fmt', 'rgb24', '-r', str(fps),
+                '-i', '-', '-c:v', 'libx264', '-crf', str(int(crf)),
+                '-pix_fmt', 'yuv420p', output_filename
+            ]
+            proc = subprocess.Popen(pipe_cmd, stdin=subprocess.PIPE, stderr=subprocess.PIPE)
+            proc.stdin.write(x.numpy().tobytes())
+            proc.stdin.close()
+            proc.wait()
+        except Exception as e2:
+            print(f"FFmpeg fallback also failed: {e2}. Trying imageio...")
+            try:
+                import imageio.v3 as iio
+                iio.imwrite(output_filename, x.numpy(), fps=fps, codec='libx264', output_params=['-crf', str(int(crf))])
+            except Exception as e3:
+                print(f"All video writing methods failed: {e3}")
+                raise
     return x
 
 
