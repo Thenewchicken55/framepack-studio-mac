@@ -4,7 +4,7 @@ av==12.1.0
 # numba/llvmlite pinned to versions with pre-built macOS wheels
 # (avoids building llvmlite from source which requires LLVM dev headers)
 numba==0.60.0
-llvmlite==0.45.1
+llvmlite==0.43.0
 diffusers==0.33.1
 einops
 ffmpeg-python==0.2.0
