@@ -108,7 +108,7 @@ fi
 
 echo ""
 echo "Installing remaining dependencies..."
-./venv/bin/pip install -r requirements_mac.txt
+./venv/bin/pip install --no-cache-dir -r requirements_mac.txt
 
 echo ""
 echo "============================================"
